@@ -303,10 +303,25 @@
             canvas.width = w; canvas.height = h;
 
             const total = Math.floor(videoElement.duration * fps);
+            
+            // --- 核心优化：等比例缩放计算逻辑 ---
+            const videoW = videoElement.videoWidth;
+            const videoH = videoElement.videoHeight;
+            const ratio = Math.min(w / videoW, h / videoH);
+            const drawW = videoW * ratio;
+            const drawH = videoH * ratio;
+            const offsetX = (w - drawW) / 2;
+            const offsetY = (h - drawH) / 2;
+
             for (let i = 0; i < total; i++) {
                 videoElement.currentTime = i * (1 / fps);
                 await new Promise(r => videoElement.onseeked = r);
-                ctx.drawImage(videoElement, 0, 0, w, h);
+                
+                // 每次清空画布，确保等比例留白处是透明的
+                ctx.clearRect(0, 0, w, h);
+                // 使用计算好的偏移量和宽高，实现居中等比例绘制
+                ctx.drawImage(videoElement, offsetX, offsetY, drawW, drawH);
+                
                 extractedFrames.push(canvas.toDataURL('image/png'));
                 document.getElementById('extractProgressFill').style.width = ((i+1)/total)*100 + '%';
                 document.getElementById('extractInfo').innerText = `正在提取: ${i+1}/${total}`;
@@ -407,14 +422,13 @@
                     }
                 }
 
-                // --- 优化后的四角水印处理逻辑 ---
-                const cornerSizeW = Math.floor(w * 0.2); // 四角检测范围
+                const cornerSizeW = Math.floor(w * 0.2);
                 const cornerSizeH = Math.floor(h * 0.2);
                 const corners = [
-                    {x: 0, y: 0, cw: cornerSizeW, ch: cornerSizeH}, // 左上
-                    {x: w - cornerSizeW, y: 0, cw: cornerSizeW, ch: cornerSizeH}, // 右上
-                    {x: 0, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH}, // 左下
-                    {x: w - cornerSizeW, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH} // 右下
+                    {x: 0, y: 0, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: w - cornerSizeW, y: 0, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: 0, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: w - cornerSizeW, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH}
                 ];
 
                 corners.forEach(rect => {
@@ -422,7 +436,7 @@
                         for(let x = rect.x; x < rect.x + rect.cw; x++) {
                             const idx = (y * w + x) * 4;
                             const diff = getDiff(x, y);
-                            if (diff < threshold + 60) { data[idx+3] = 0; } // 四角采用更高容差处理水印
+                            if (diff < threshold + 60) { data[idx+3] = 0; }
                         }
                     }
                 });
@@ -433,23 +447,19 @@
             }
             renderFrames();
             document.getElementById('generateSection').style.display = 'block';
-            document.getElementById('downloadSequenceBtn').style.display = 'inline-block'; // 显示新按钮
+            document.getElementById('downloadSequenceBtn').style.display = 'inline-block';
             startPreview();
         };
 
-        // 新增功能：导出独立 PNG 序列
         document.getElementById('downloadSequenceBtn').onclick = async () => {
             const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
             if (frames.length === 0) return;
-
             const zip = new JSZip();
             const folder = zip.folder("animation_sequence");
-
             frames.forEach((src, i) => {
                 const imgBase64 = src.split(',')[1];
                 folder.file(`frame_${String(i).padStart(3, '0')}.png`, imgBase64, {base64: true});
             });
-
             const content = await zip.generateAsync({type: "blob"});
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
@@ -461,20 +471,16 @@
             const cols = parseInt(document.getElementById('columns').value);
             const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
             if (frames.length === 0) return;
-
             const rows = Math.ceil(frames.length / cols);
             const canvas = document.createElement('canvas');
-            
             const imgHelper = new Image();
             imgHelper.onload = () => {
                 const cellW = imgHelper.width;
                 const cellH = imgHelper.height;
-                
                 canvas.width = cellW * cols;
                 canvas.height = cellH * rows;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 let loadedCount = 0;
                 frames.forEach((src, i) => {
                     const f = new Image();
@@ -509,11 +515,9 @@
                 document.getElementById('previewImg').src = "";
                 return;
             }
-
             let currentIdx = 0;
             const previewImg = document.getElementById('previewImg');
             const fps = parseInt(document.getElementById('previewFps').value) || 15;
-            
             previewInterval = setInterval(() => {
                 if(frames[currentIdx]) {
                     previewImg.src = frames[currentIdx];
