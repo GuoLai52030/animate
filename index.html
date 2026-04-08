@@ -5,19 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>序列帧动画工具 - 专业增强版</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -26,18 +20,13 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
         }
-
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 30px;
             text-align: center;
         }
-
-        .main-content {
-            padding: 30px;
-        }
-
+        .main-content { padding: 30px; }
         .section {
             margin-bottom: 30px;
             padding: 25px;
@@ -45,7 +34,6 @@
             border-radius: 12px;
             border: 2px dashed #dee2e6;
         }
-
         .section-title {
             font-size: 20px;
             font-weight: 600;
@@ -55,7 +43,6 @@
             align-items: center;
             gap: 10px;
         }
-
         .section-title::before {
             content: '';
             width: 4px;
@@ -63,7 +50,6 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 2px;
         }
-
         .upload-area {
             border: 3px dashed #667eea;
             border-radius: 12px;
@@ -73,32 +59,21 @@
             cursor: pointer;
             transition: all 0.3s;
         }
-
         .upload-area:hover { background: #f8f9ff; }
-
         input[type="file"] { display: none; }
-
         .controls {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: 600; font-size: 14px; }
-
         input[type="number"], input[type="range"], select {
             padding: 10px;
             border: 2px solid #dee2e6;
             border-radius: 8px;
         }
-
         button {
             padding: 12px 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -109,16 +84,13 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
-
         button:disabled { background: #adb5bd; cursor: not-allowed; }
-
         .frames-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
-
         .frame-item {
             position: relative;
             border: 2px solid #dee2e6;
@@ -129,21 +101,16 @@
             cursor: zoom-in;
             transition: transform 0.2s;
         }
-
         .frame-item img { width: 100%; height: 100%; object-fit: contain; }
-
         .frame-item.zoomed {
             position: fixed;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(3);
             z-index: 1000;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
             cursor: zoom-out;
-            width: 250px;
-            height: 250px;
+            width: 250px; height: 250px;
         }
-
         .overlay {
             display: none;
             position: fixed;
@@ -151,7 +118,6 @@
             background: rgba(0,0,0,0.8);
             z-index: 999;
         }
-
         .frame-number {
             position: absolute;
             bottom: 5px; right: 5px;
@@ -161,7 +127,6 @@
             border-radius: 4px;
             font-size: 11px;
         }
-
         .progress-bar {
             width: 100%; height: 8px;
             background: #e9ecef;
@@ -169,13 +134,11 @@
             overflow: hidden;
             margin-top: 15px;
         }
-
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             width: 0%;
         }
-
         .tips {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -190,8 +153,8 @@
     <div class="overlay" id="overlay"></div>
     <div class="container">
         <div class="header">
-            <h1>🎬 序列帧动画工具 (专业增强版)</h1>
-            <p>视频抽帧 · 边缘泛洪抠像 · 水印角色重合补全 · 放大细节检查</p>
+            <h1>🎬 序列帧动画工具 (专业修复版)</h1>
+            <p>视频抽帧 · 智能抠像 · 水印重合精准修复 · 杜绝垂直拉伸</p>
         </div>
 
         <div class="main-content">
@@ -241,7 +204,7 @@
             </div>
 
             <div class="section" id="removeBackgroundSection" style="display: none;">
-                <div class="section-title">✂️ 第四步：高级抠图与水印重合修复</div>
+                <div class="section-title">✂️ 第四步：高级抠图与水印精准修复</div>
                 <div class="controls">
                     <div class="control-group">
                         <label>背景模式</label>
@@ -252,8 +215,8 @@
                         </select>
                     </div>
                     <div class="control-group">
-                        <label>容差阈值: <span id="thresholdValue">30</span></label>
-                        <input type="range" id="threshold" min="0" max="100" value="30">
+                        <label>容差阈值: <span id="thresholdValue">35</span></label>
+                        <input type="range" id="threshold" min="0" max="100" value="35">
                     </div>
                     <div class="control-group">
                         <label>边缘羽化: <span id="featherValue">2</span></label>
@@ -284,7 +247,7 @@
             </div>
 
             <div class="tips">
-                <p>💡 <b>修复说明：</b> 如果水印与角色脚部重合，算法会自动向上搜索角色的颜色并进行覆盖填充，确保角色立绘完整。若效果不佳，请适当调高容差。</p>
+                <p>💡 <b>修复提示：</b> 已限制修复搜索范围至 8 像素，可有效防止脚部像素拉伸。如仍有微量残留，请将“容差阈值”稍微调高至 40-45 即可。</p>
             </div>
         </div>
     </div>
@@ -317,7 +280,6 @@
             const fps = parseInt(document.getElementById('fpsSelect').value);
             const w = parseInt(document.getElementById('frameWidth').value);
             const h = parseInt(document.getElementById('frameHeight').value);
-            
             document.getElementById('extractProgress').style.display = 'block';
             extractedFrames = [];
             const canvas = document.createElement('canvas');
@@ -353,9 +315,7 @@
                     if(!isZoomed) {
                         div.classList.add('zoomed');
                         overlay.style.display = 'block';
-                    } else {
-                        overlay.style.display = 'none';
-                    }
+                    } else { overlay.style.display = 'none'; }
                 };
                 grid.appendChild(div);
             });
@@ -389,7 +349,7 @@
                     return Math.hypot(data[idx]-target[0], data[idx+1]-target[1], data[idx+2]-target[2]);
                 };
 
-                // 泛洪处理主背景
+                // 主背景泛洪
                 for(let x=0; x<w; x++) { if(!visited[x]) { queue[tail++]=x; queue[tail++]=0; visited[x]=1; } }
                 for(let y=0; y<h; y++) { if(!visited[y*w]) { queue[tail++]=0; queue[tail++]=y; visited[y*w]=1; } }
                 
@@ -411,38 +371,36 @@
                     }
                 }
 
-                // --- 深度处理右下角水印：增加重合补全功能 ---
-                const scanStartY = Math.floor(h * 0.8);
-                const scanStartX = Math.floor(w * 0.7);
+                // --- 核心修复：防止脚部拉伸的水印处理逻辑 ---
+                const scanStartY = Math.floor(h * 0.82);
+                const scanStartX = Math.floor(w * 0.75);
                 for(let y = scanStartY; y < h; y++) {
                     for(let x = scanStartX; x < w; x++) {
                         const idx = (y * w + x) * 4;
                         const diff = getDiff(x, y);
 
-                        // 判定为水印所在色域
-                        if (diff < threshold + 60) {
-                            // 先尝试向上溯源找角色的颜色
+                        if (diff < threshold + 50) { 
                             let foundCharacterColor = false;
-                            for (let offset = 1; offset <= 20; offset++) {
+                            // 限制向上搜索距离为 8 像素，防止形成长条拉丝
+                            const searchLimit = 8; 
+                            for (let offset = 1; offset <= searchLimit; offset++) {
                                 const checkY = y - offset;
                                 if (checkY < 0) break;
                                 const checkIdx = (checkY * w + x) * 4;
                                 const checkDiff = getDiff(x, checkY);
 
-                                // 如果上方是不属于背景的颜色（即角色），则“拉取”颜色覆盖水印
-                                if (checkDiff > threshold + 25) {
+                                // 只有上方颜色与背景色有显著差异（判定为角色实体）才进行采样覆盖
+                                if (checkDiff > threshold + 30) {
                                     data[idx] = data[checkIdx];
                                     data[idx+1] = data[checkIdx+1];
                                     data[idx+2] = data[checkIdx+2];
-                                    data[idx+3] = 255; // 填满透明度进行覆盖
+                                    data[idx+3] = 255; 
                                     foundCharacterColor = true;
                                     break;
                                 }
                             }
-                            // 如果上方没找到角色（纯背景处的水印），则直接扣除
-                            if (!foundCharacterColor) {
-                                data[idx+3] = 0;
-                            }
+                            // 如果 8 像素内没找到角色，则判定为纯背景，直接透明
+                            if (!foundCharacterColor) data[idx+3] = 0;
                         }
                     }
                 }
@@ -483,7 +441,6 @@
             };
             img.src = frames[0];
         };
-
         document.getElementById('threshold').oninput = (e) => document.getElementById('thresholdValue').innerText = e.target.value;
         document.getElementById('feather').oninput = (e) => document.getElementById('featherValue').innerText = e.target.value;
     </script>
