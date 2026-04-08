@@ -191,7 +191,7 @@
     <div class="container">
         <div class="header">
             <h1>🎬 序列帧动画工具 (专业增强版)</h1>
-            <p>视频抽帧 · 边缘泛洪抠像 · 水印智能剔除 · 放大细节检查</p>
+            <p>视频抽帧 · 边缘泛洪抠像 · 水印角色重合补全 · 放大细节检查</p>
         </div>
 
         <div class="main-content">
@@ -204,7 +204,6 @@
                 </div>
                 <div id="videoPreview" style="margin-top: 20px; display: none;">
                     <video id="videoElement" controls style="width: 100%;"></video>
-                    <div id="videoInfo" style="margin-top:10px; color:#666;"></div>
                 </div>
             </div>
 
@@ -242,7 +241,7 @@
             </div>
 
             <div class="section" id="removeBackgroundSection" style="display: none;">
-                <div class="section-title">✂️ 第四步：高级抠图与水印处理</div>
+                <div class="section-title">✂️ 第四步：高级抠图与水印重合修复</div>
                 <div class="controls">
                     <div class="control-group">
                         <label>背景模式</label>
@@ -285,7 +284,7 @@
             </div>
 
             <div class="tips">
-                <p>💡 <b>提示：</b> 水印智能清理功能已开启。如果水印残留较多，请尝试适当调高“容差阈值”。点击上方预览图可放大检查细节。</p>
+                <p>💡 <b>修复说明：</b> 如果水印与角色脚部重合，算法会自动向上搜索角色的颜色并进行覆盖填充，确保角色立绘完整。若效果不佳，请适当调高容差。</p>
             </div>
         </div>
     </div>
@@ -362,7 +361,6 @@
             });
         }
 
-        // --- 核心优化部分 ---
         document.getElementById('removeBackgroundBtn').onclick = async () => {
             const threshold = parseInt(document.getElementById('threshold').value);
             const feather = parseInt(document.getElementById('feather').value);
@@ -382,7 +380,6 @@
                 let data = imageData.data;
                 const w = canvas.width, h = canvas.height;
 
-                // 优化后的泛洪+细节提取
                 const visited = new Uint8Array(w * h);
                 const queue = new Int32Array(w * h * 2);
                 let head = 0, tail = 0;
@@ -392,7 +389,7 @@
                     return Math.hypot(data[idx]-target[0], data[idx+1]-target[1], data[idx+2]-target[2]);
                 };
 
-                // 从四边边缘注入种子
+                // 泛洪处理主背景
                 for(let x=0; x<w; x++) { if(!visited[x]) { queue[tail++]=x; queue[tail++]=0; visited[x]=1; } }
                 for(let y=0; y<h; y++) { if(!visited[y*w]) { queue[tail++]=0; queue[tail++]=y; visited[y*w]=1; } }
                 
@@ -401,9 +398,8 @@
                     const idx = (cy * w + cx) * 4;
                     const diff = getDiff(cx, cy);
 
-                    if(diff < threshold + 15) { // 稍微扩大边缘搜索范围
+                    if(diff < threshold + 15) {
                         data[idx+3] = 0; 
-                        // 搜索相邻像素
                         [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx,dy]) => {
                             const nx = cx+dx, ny = cy+dy;
                             if(nx>=0 && nx<w && ny>=0 && ny<h && !visited[ny*w+nx]) {
@@ -415,17 +411,38 @@
                     }
                 }
 
-                // 针对“豆包”等右下角水印的深度清除
-                // 扫描底部 20% 区域，特别是右侧部分
+                // --- 深度处理右下角水印：增加重合补全功能 ---
                 const scanStartY = Math.floor(h * 0.8);
                 const scanStartX = Math.floor(w * 0.7);
                 for(let y = scanStartY; y < h; y++) {
                     for(let x = scanStartX; x < w; x++) {
                         const idx = (y * w + x) * 4;
                         const diff = getDiff(x, y);
-                        // 水印通常是浅灰色或带有半透明背景，这里加强色度检测
-                        if (diff < threshold + 60) { 
-                            data[idx+3] = 0; 
+
+                        // 判定为水印所在色域
+                        if (diff < threshold + 60) {
+                            // 先尝试向上溯源找角色的颜色
+                            let foundCharacterColor = false;
+                            for (let offset = 1; offset <= 20; offset++) {
+                                const checkY = y - offset;
+                                if (checkY < 0) break;
+                                const checkIdx = (checkY * w + x) * 4;
+                                const checkDiff = getDiff(x, checkY);
+
+                                // 如果上方是不属于背景的颜色（即角色），则“拉取”颜色覆盖水印
+                                if (checkDiff > threshold + 25) {
+                                    data[idx] = data[checkIdx];
+                                    data[idx+1] = data[checkIdx+1];
+                                    data[idx+2] = data[checkIdx+2];
+                                    data[idx+3] = 255; // 填满透明度进行覆盖
+                                    foundCharacterColor = true;
+                                    break;
+                                }
+                            }
+                            // 如果上方没找到角色（纯背景处的水印），则直接扣除
+                            if (!foundCharacterColor) {
+                                data[idx+3] = 0;
+                            }
                         }
                     }
                 }
