@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>序列帧动画工具 - 专业增强版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -87,9 +88,10 @@
         .frame-item {
             position: relative; border: 2px solid #dee2e6; border-radius: 8px;
             overflow: hidden; aspect-ratio: 1; background: #f8f9fa;
-            cursor: zoom-in; transition: transform 0.2s;
+            cursor: grab; transition: transform 0.2s, opacity 0.2s;
         }
-        .frame-item img { width: 100%; height: 100%; object-fit: contain; }
+        .frame-item:active { cursor: grabbing; }
+        .frame-item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
         .frame-item.zoomed {
             position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(3);
@@ -105,8 +107,8 @@
             position: absolute; bottom: 5px; right: 5px;
             background: rgba(0,0,0,0.7); color: white;
             padding: 2px 6px; border-radius: 4px; font-size: 11px;
+            pointer-events: none;
         }
-        /* 新增：删除按钮样式 */
         .frame-delete {
             position: absolute; top: 5px; right: 5px;
             background: rgba(220, 53, 69, 0.9); color: white;
@@ -147,7 +149,7 @@
     <div class="container">
         <div class="header">
             <h1>🎬 序列帧动画工具 (专业增强版)</h1>
-            <p>视频抽帧 · 边缘泛洪抠像 · 水印智能剔除 · 动画实时预览</p>
+            <p>视频抽帧 · 边缘泛洪抠像 · 四角水印剔除 · 手动排序 · 独立序列导出</p>
         </div>
 
         <div class="main-content">
@@ -192,7 +194,7 @@
             </div>
 
             <div class="section" id="framesSection" style="display: none;">
-                <div class="section-title">🖼️ 第三步：提取帧预览 (点击图片放大，鼠标悬停可删除)</div>
+                <div class="section-title">🖼️ 第三步：提取帧预览 (支持拖拽排序 / 点击放大 / ✕ 删除)</div>
                 <div class="frames-grid" id="framesGrid"></div>
             </div>
 
@@ -237,9 +239,10 @@
                                 <input type="number" id="previewFps" value="15">
                             </div>
                         </div>
-                        <div style="margin-top:20px; display:flex; gap:10px;">
-                            <button id="generateSpriteSheetBtn">🎯 生成序列帧图</button>
-                            <button id="downloadBtn" style="display: none; background: #28a745;">💾 下载 PNG</button>
+                        <div style="margin-top:20px; display:flex; flex-wrap: wrap; gap:10px;">
+                            <button id="generateSpriteSheetBtn">🎯 生成序列帧图集</button>
+                            <button id="downloadBtn" style="display: none; background: #28a745;">💾 下载图集 PNG</button>
+                            <button id="downloadSequenceBtn" style="display: none; background: #17a2b8;">📦 导出独立序列 (ZIP)</button>
                         </div>
                     </div>
                     
@@ -259,7 +262,7 @@
             </div>
 
             <div class="tips">
-                <p>💡 <b>Pro Tips：</b> 您可以手动点击右上角的红色按钮删除不需要的动作帧。图集生成和预览会自动跳过已删除的帧。</p>
+                <p>💡 <b>Pro Tips：</b> 支持直接<b>拖拽帧卡片</b>进行手动排序。智能抠图已开启<b>四角自动检索</b>模式，能有效剔除四周的水印残留。</p>
             </div>
         </div>
     </div>
@@ -269,6 +272,7 @@
         let extractedFrames = [];
         let processedFrames = [];
         let previewInterval = null;
+        let dragSourceIndex = null; // 用于存储拖拽源索引
 
         const videoInput = document.getElementById('videoInput');
         const videoElement = document.getElementById('videoElement');
@@ -296,16 +300,28 @@
             
             document.getElementById('extractProgress').style.display = 'block';
             extractedFrames = [];
-            processedFrames = []; // 重置处理后的帧
+            processedFrames = []; 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = w; canvas.height = h;
 
             const total = Math.floor(videoElement.duration * fps);
+            
+            const videoW = videoElement.videoWidth;
+            const videoH = videoElement.videoHeight;
+            const ratio = Math.min(w / videoW, h / videoH);
+            const drawW = videoW * ratio;
+            const drawH = videoH * ratio;
+            const offsetX = (w - drawW) / 2;
+            const offsetY = (h - drawH) / 2;
+
             for (let i = 0; i < total; i++) {
                 videoElement.currentTime = i * (1 / fps);
                 await new Promise(r => videoElement.onseeked = r);
-                ctx.drawImage(videoElement, 0, 0, w, h);
+                
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(videoElement, offsetX, offsetY, drawW, drawH);
+                
                 extractedFrames.push(canvas.toDataURL('image/png'));
                 document.getElementById('extractProgressFill').style.width = ((i+1)/total)*100 + '%';
                 document.getElementById('extractInfo').innerText = `正在提取: ${i+1}/${total}`;
@@ -315,18 +331,19 @@
             document.getElementById('removeBackgroundSection').style.display = 'block';
         };
 
-        // --- 核心优化：集成了删除功能的渲染逻辑 ---
+        // --- 核心渲染函数：集成拖拽逻辑 ---
         function renderFrames() {
             const grid = document.getElementById('framesGrid');
             grid.innerHTML = '';
-            
-            // 优先显示处理过的帧，否则显示原始提取帧
             const isProcessed = processedFrames.length > 0;
             const currentFrames = isProcessed ? processedFrames : extractedFrames;
 
             currentFrames.forEach((src, idx) => {
                 const div = document.createElement('div');
                 div.className = 'frame-item';
+                div.setAttribute('draggable', true); // 启用拖拽
+                div.dataset.index = idx;
+                
                 if(isProcessed) div.style.background = 'repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 50% / 15px 15px';
                 
                 div.innerHTML = `
@@ -335,7 +352,12 @@
                     <div class="frame-delete" title="删除此帧">✕</div>
                 `;
 
-                // 放大功能
+                // 拖拽相关事件
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragend', handleDragEnd);
+
                 div.onclick = (e) => {
                     e.stopPropagation();
                     const isZoomed = div.classList.contains('zoomed');
@@ -346,7 +368,6 @@
                     } else { overlay.style.display = 'none'; }
                 };
 
-                // 删除功能
                 div.querySelector('.frame-delete').onclick = (e) => {
                     e.stopPropagation();
                     if(isProcessed) {
@@ -355,11 +376,46 @@
                         extractedFrames.splice(idx, 1);
                     }
                     renderFrames();
-                    startPreview(); // 实时更新预览
+                    startPreview(); 
                 };
 
                 grid.appendChild(div);
             });
+        }
+
+        // --- 拖拽事件处理器 ---
+        function handleDragStart(e) {
+            dragSourceIndex = parseInt(this.dataset.index);
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+            const targetIndex = parseInt(this.dataset.index);
+            
+            if (dragSourceIndex !== targetIndex) {
+                const isProcessed = processedFrames.length > 0;
+                const list = isProcessed ? processedFrames : extractedFrames;
+                
+                // 执行数组元素位置调换
+                const movedItem = list.splice(dragSourceIndex, 1)[0];
+                list.splice(targetIndex, 0, movedItem);
+                
+                renderFrames();
+                startPreview(); // 排序后实时更新预览顺序
+            }
+            return false;
+        }
+
+        function handleDragEnd() {
+            this.style.opacity = '1';
         }
 
         document.getElementById('removeBackgroundBtn').onclick = async () => {
@@ -411,15 +467,24 @@
                     }
                 }
 
-                const scanStartY = Math.floor(h * 0.8);
-                const scanStartX = Math.floor(w * 0.7);
-                for(let y = scanStartY; y < h; y++) {
-                    for(let x = scanStartX; x < w; x++) {
-                        const idx = (y * w + x) * 4;
-                        const diff = getDiff(x, y);
-                        if (diff < threshold + 60) { data[idx+3] = 0; }
+                const cornerSizeW = Math.floor(w * 0.2);
+                const cornerSizeH = Math.floor(h * 0.2);
+                const corners = [
+                    {x: 0, y: 0, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: w - cornerSizeW, y: 0, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: 0, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH},
+                    {x: w - cornerSizeW, y: h - cornerSizeH, cw: cornerSizeW, ch: cornerSizeH}
+                ];
+
+                corners.forEach(rect => {
+                    for(let y = rect.y; y < rect.y + rect.ch; y++) {
+                        for(let x = rect.x; x < rect.x + rect.cw; x++) {
+                            const idx = (y * w + x) * 4;
+                            const diff = getDiff(x, y);
+                            if (diff < threshold + 60) { data[idx+3] = 0; }
+                        }
                     }
-                }
+                });
 
                 ctx.putImageData(imageData, 0, 0);
                 processedFrames.push(canvas.toDataURL('image/png'));
@@ -427,27 +492,40 @@
             }
             renderFrames();
             document.getElementById('generateSection').style.display = 'block';
+            document.getElementById('downloadSequenceBtn').style.display = 'inline-block';
             startPreview();
+        };
+
+        document.getElementById('downloadSequenceBtn').onclick = async () => {
+            const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
+            if (frames.length === 0) return;
+            const zip = new JSZip();
+            const folder = zip.folder("animation_sequence");
+            frames.forEach((src, i) => {
+                const imgBase64 = src.split(',')[1];
+                folder.file(`frame_${String(i).padStart(3, '0')}.png`, imgBase64, {base64: true});
+            });
+            const content = await zip.generateAsync({type: "blob"});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "sequence_frames.zip";
+            link.click();
         };
 
         document.getElementById('generateSpriteSheetBtn').onclick = () => {
             const cols = parseInt(document.getElementById('columns').value);
             const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
             if (frames.length === 0) return;
-
             const rows = Math.ceil(frames.length / cols);
             const canvas = document.createElement('canvas');
-            
             const imgHelper = new Image();
             imgHelper.onload = () => {
                 const cellW = imgHelper.width;
                 const cellH = imgHelper.height;
-                
                 canvas.width = cellW * cols;
                 canvas.height = cellH * rows;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
                 let loadedCount = 0;
                 frames.forEach((src, i) => {
                     const f = new Image();
@@ -482,11 +560,9 @@
                 document.getElementById('previewImg').src = "";
                 return;
             }
-
             let currentIdx = 0;
             const previewImg = document.getElementById('previewImg');
             const fps = parseInt(document.getElementById('previewFps').value) || 15;
-            
             previewInterval = setInterval(() => {
                 if(frames[currentIdx]) {
                     previewImg.src = frames[currentIdx];
