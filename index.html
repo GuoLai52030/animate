@@ -44,9 +44,7 @@
             gap: 10px;
         }
         .section-title::before {
-            content: '';
-            width: 4px;
-            height: 24px;
+            content: ''; width: 4px; height: 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 2px;
         }
@@ -70,18 +68,13 @@
         .control-group { display: flex; flex-direction: column; gap: 8px; }
         label { font-weight: 600; font-size: 14px; }
         input[type="number"], input[type="range"], select {
-            padding: 10px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
+            padding: 10px; border: 2px solid #dee2e6; border-radius: 8px;
         }
         button {
             padding: 12px 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
+            color: white; border: none; border-radius: 8px;
+            font-weight: 600; cursor: pointer;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
         button:disabled { background: #adb5bd; cursor: not-allowed; }
@@ -92,60 +85,50 @@
             margin-top: 20px;
         }
         .frame-item {
-            position: relative;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            overflow: hidden;
-            aspect-ratio: 1;
-            background: #f8f9fa;
-            cursor: zoom-in;
-            transition: transform 0.2s;
+            position: relative; border: 2px solid #dee2e6; border-radius: 8px;
+            overflow: hidden; aspect-ratio: 1; background: #f8f9fa;
+            cursor: zoom-in; transition: transform 0.2s;
         }
         .frame-item img { width: 100%; height: 100%; object-fit: contain; }
         .frame-item.zoomed {
-            position: fixed;
-            top: 50%; left: 50%;
+            position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(3);
-            z-index: 1000;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            cursor: zoom-out;
-            width: 250px; height: 250px;
+            z-index: 1000; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            cursor: zoom-out; width: 250px; height: 250px;
         }
         .overlay {
-            display: none;
-            position: fixed;
+            display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 999;
+            background: rgba(0,0,0,0.8); z-index: 999;
         }
         .frame-number {
-            position: absolute;
-            bottom: 5px; right: 5px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
+            position: absolute; bottom: 5px; right: 5px;
+            background: rgba(0,0,0,0.7); color: white;
+            padding: 2px 6px; border-radius: 4px; font-size: 11px;
         }
         .progress-bar {
-            width: 100%; height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 15px;
+            width: 100%; height: 8px; background: #e9ecef;
+            border-radius: 4px; overflow: hidden; margin-top: 15px;
         }
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             width: 0%;
         }
+        /* 预览窗口样式 */
+        #previewWindow {
+            width: 200px; height: 200px;
+            border: 2px solid #667eea;
+            margin: 20px auto;
+            background: repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 50% / 20px 20px;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border-radius: 12px;
+        }
+        #previewImg { max-width: 100%; max-height: 100%; }
+        
         .tips {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            color: #856404;
+            background: #fff3cd; border-left: 4px solid #ffc107;
+            padding: 15px; border-radius: 8px; margin-top: 20px; color: #856404;
         }
     </style>
 </head>
@@ -153,8 +136,8 @@
     <div class="overlay" id="overlay"></div>
     <div class="container">
         <div class="header">
-            <h1>🎬 序列帧动画工具 (专业修复版)</h1>
-            <p>视频抽帧 · 智能抠像 · 水印重合精准修复 · 杜绝垂直拉伸</p>
+            <h1>🎬 序列帧动画工具 (专业增强版)</h1>
+            <p>视频抽帧 · 边缘泛洪抠像 · 水印智能剔除 · 动画实时预览</p>
         </div>
 
         <div class="main-content">
@@ -204,7 +187,7 @@
             </div>
 
             <div class="section" id="removeBackgroundSection" style="display: none;">
-                <div class="section-title">✂️ 第四步：高级抠图与水印精准修复</div>
+                <div class="section-title">✂️ 第四步：高级抠图与水印处理</div>
                 <div class="controls">
                     <div class="control-group">
                         <label>背景模式</label>
@@ -215,8 +198,8 @@
                         </select>
                     </div>
                     <div class="control-group">
-                        <label>容差阈值: <span id="thresholdValue">35</span></label>
-                        <input type="range" id="threshold" min="0" max="100" value="35">
+                        <label>容差阈值: <span id="thresholdValue">30</span></label>
+                        <input type="range" id="threshold" min="0" max="100" value="30">
                     </div>
                     <div class="control-group">
                         <label>边缘羽化: <span id="featherValue">2</span></label>
@@ -230,24 +213,43 @@
             </div>
 
             <div class="section" id="generateSection" style="display: none;">
-                <div class="section-title">📦 第五步：导出 Unity 图集</div>
-                <div class="controls">
-                    <div class="control-group">
-                        <label>每行帧数</label>
-                        <input type="number" id="columns" value="8">
+                <div class="section-title">📦 第五步：导出与动画预览</div>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <div class="controls">
+                            <div class="control-group">
+                                <label>每行帧数 (Columns)</label>
+                                <input type="number" id="columns" value="8">
+                            </div>
+                            <div class="control-group">
+                                <label>预览速度 (FPS)</label>
+                                <input type="number" id="previewFps" value="15">
+                            </div>
+                        </div>
+                        <div style="margin-top:20px; display:flex; gap:10px;">
+                            <button id="generateSpriteSheetBtn">🎯 生成序列帧图</button>
+                            <button id="downloadBtn" style="display: none; background: #28a745;">💾 下载 PNG</button>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <label style="display: block; margin-bottom: 10px;">🏃 动画预览窗口</label>
+                        <div id="previewWindow">
+                            <img id="previewImg" src="" alt="等待生成...">
+                        </div>
+                        <p style="font-size: 12px; color: #666;">自动循环当前序列</p>
                     </div>
                 </div>
-                <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button id="generateSpriteSheetBtn">🎯 生成序列帧图</button>
-                    <button id="downloadBtn" style="display: none; background: #28a745;">💾 下载 PNG</button>
-                </div>
+
                 <div id="resultPreview" style="margin-top:20px; display:none; text-align:center;">
-                    <img id="resultImage" style="max-width:100%; border:1px solid #ccc;">
+                    <p style="margin-bottom:10px; font-weight:bold;">最终图集预览:</p>
+                    <img id="resultImage" style="max-width:100%; border:1px solid #ccc; background: repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 50% / 20px 20px;">
                 </div>
             </div>
 
             <div class="tips">
-                <p>💡 <b>修复提示：</b> 已限制修复搜索范围至 8 像素，可有效防止脚部像素拉伸。如仍有微量残留，请将“容差阈值”稍微调高至 40-45 即可。</p>
+                <p>💡 <b>Pro Tips：</b> 图集生成时会自动保持每一帧等大且角色居中。预览速度可根据需求调整，方便检查动作连贯性。</p>
             </div>
         </div>
     </div>
@@ -256,6 +258,7 @@
         let videoFile = null;
         let extractedFrames = [];
         let processedFrames = [];
+        let previewInterval = null;
 
         const videoInput = document.getElementById('videoInput');
         const videoElement = document.getElementById('videoElement');
@@ -280,6 +283,7 @@
             const fps = parseInt(document.getElementById('fpsSelect').value);
             const w = parseInt(document.getElementById('frameWidth').value);
             const h = parseInt(document.getElementById('frameHeight').value);
+            
             document.getElementById('extractProgress').style.display = 'block';
             extractedFrames = [];
             const canvas = document.createElement('canvas');
@@ -349,7 +353,6 @@
                     return Math.hypot(data[idx]-target[0], data[idx+1]-target[1], data[idx+2]-target[2]);
                 };
 
-                // 主背景泛洪
                 for(let x=0; x<w; x++) { if(!visited[x]) { queue[tail++]=x; queue[tail++]=0; visited[x]=1; } }
                 for(let y=0; y<h; y++) { if(!visited[y*w]) { queue[tail++]=0; queue[tail++]=y; visited[y*w]=1; } }
                 
@@ -371,37 +374,13 @@
                     }
                 }
 
-                // --- 核心修复：防止脚部拉伸的水印处理逻辑 ---
-                const scanStartY = Math.floor(h * 0.82);
-                const scanStartX = Math.floor(w * 0.75);
+                const scanStartY = Math.floor(h * 0.8);
+                const scanStartX = Math.floor(w * 0.7);
                 for(let y = scanStartY; y < h; y++) {
                     for(let x = scanStartX; x < w; x++) {
                         const idx = (y * w + x) * 4;
                         const diff = getDiff(x, y);
-
-                        if (diff < threshold + 50) { 
-                            let foundCharacterColor = false;
-                            // 限制向上搜索距离为 8 像素，防止形成长条拉丝
-                            const searchLimit = 8; 
-                            for (let offset = 1; offset <= searchLimit; offset++) {
-                                const checkY = y - offset;
-                                if (checkY < 0) break;
-                                const checkIdx = (checkY * w + x) * 4;
-                                const checkDiff = getDiff(x, checkY);
-
-                                // 只有上方颜色与背景色有显著差异（判定为角色实体）才进行采样覆盖
-                                if (checkDiff > threshold + 30) {
-                                    data[idx] = data[checkIdx];
-                                    data[idx+1] = data[checkIdx+1];
-                                    data[idx+2] = data[checkIdx+2];
-                                    data[idx+3] = 255; 
-                                    foundCharacterColor = true;
-                                    break;
-                                }
-                            }
-                            // 如果 8 像素内没找到角色，则判定为纯背景，直接透明
-                            if (!foundCharacterColor) data[idx+3] = 0;
-                        }
+                        if (diff < threshold + 60) { data[idx+3] = 0; }
                     }
                 }
 
@@ -411,36 +390,79 @@
             }
             renderFrames(processedFrames, true);
             document.getElementById('generateSection').style.display = 'block';
+            startPreview();
         };
 
+        // --- 核心优化逻辑：固定大小居中不压缩 + 动画预览 ---
         document.getElementById('generateSpriteSheetBtn').onclick = () => {
             const cols = parseInt(document.getElementById('columns').value);
             const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
+            if (frames.length === 0) return;
+
             const rows = Math.ceil(frames.length / cols);
             const canvas = document.createElement('canvas');
-            const img = new Image();
-            img.onload = () => {
-                canvas.width = img.width * cols; canvas.height = img.height * rows;
+            
+            // 获取第一帧作为基准尺寸
+            const imgHelper = new Image();
+            imgHelper.onload = () => {
+                const cellW = imgHelper.width;
+                const cellH = imgHelper.height;
+                
+                canvas.width = cellW * cols;
+                canvas.height = cellH * rows;
                 const ctx = canvas.getContext('2d');
-                let count = 0;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                let loadedCount = 0;
                 frames.forEach((src, i) => {
                     const f = new Image();
                     f.onload = () => {
-                        ctx.drawImage(f, (i%cols)*img.width, Math.floor(i/cols)*img.height);
-                        if(++count === frames.length) {
+                        const targetX = (i % cols) * cellW;
+                        const targetY = Math.floor(i / cols) * cellH;
+                        
+                        // 逻辑：计算居中位置，使用原图尺寸绘制，严禁缩放（保持角色比例）
+                        // 因为源帧已经是 512x512（或设定值），所以直接原样画在单元格内
+                        ctx.drawImage(f, 0, 0, f.width, f.height, targetX, targetY, cellW, cellH);
+                        
+                        loadedCount++;
+                        if (loadedCount === frames.length) {
                             const res = canvas.toDataURL('image/png');
                             document.getElementById('resultImage').src = res;
                             document.getElementById('resultPreview').style.display = 'block';
                             const dl = document.getElementById('downloadBtn');
                             dl.style.display = 'inline-block';
-                            dl.onclick = () => { const a = document.createElement('a'); a.download="sprite.png"; a.href=res; a.click(); };
+                            dl.onclick = () => { 
+                                const a = document.createElement('a'); 
+                                a.download="spritesheet.png"; a.href=res; a.click(); 
+                            };
+                            startPreview(); // 生成完更新预览
                         }
                     };
                     f.src = src;
                 });
             };
-            img.src = frames[0];
+            imgHelper.src = frames[0];
         };
+
+        // 动画预览逻辑
+        function startPreview() {
+            if (previewInterval) clearInterval(previewInterval);
+            const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
+            if (frames.length === 0) return;
+
+            let currentIdx = 0;
+            const previewImg = document.getElementById('previewImg');
+            const fps = parseInt(document.getElementById('previewFps').value) || 15;
+            
+            previewInterval = setInterval(() => {
+                previewImg.src = frames[currentIdx];
+                currentIdx = (currentIdx + 1) % frames.length;
+            }, 1000 / fps);
+        }
+
+        // 实时调整预览速度
+        document.getElementById('previewFps').onchange = startPreview;
+
         document.getElementById('threshold').oninput = (e) => document.getElementById('thresholdValue').innerText = e.target.value;
         document.getElementById('feather').oninput = (e) => document.getElementById('featherValue').innerText = e.target.value;
     </script>
