@@ -88,9 +88,10 @@
         .frame-item {
             position: relative; border: 2px solid #dee2e6; border-radius: 8px;
             overflow: hidden; aspect-ratio: 1; background: #f8f9fa;
-            cursor: zoom-in; transition: transform 0.2s;
+            cursor: grab; transition: transform 0.2s, opacity 0.2s;
         }
-        .frame-item img { width: 100%; height: 100%; object-fit: contain; }
+        .frame-item:active { cursor: grabbing; }
+        .frame-item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
         .frame-item.zoomed {
             position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%) scale(3);
@@ -106,6 +107,7 @@
             position: absolute; bottom: 5px; right: 5px;
             background: rgba(0,0,0,0.7); color: white;
             padding: 2px 6px; border-radius: 4px; font-size: 11px;
+            pointer-events: none;
         }
         .frame-delete {
             position: absolute; top: 5px; right: 5px;
@@ -147,7 +149,7 @@
     <div class="container">
         <div class="header">
             <h1>🎬 序列帧动画工具 (专业增强版)</h1>
-            <p>视频抽帧 · 边缘泛洪抠像 · 四角水印剔除 · 独立序列导出</p>
+            <p>视频抽帧 · 边缘泛洪抠像 · 四角水印剔除 · 手动排序 · 独立序列导出</p>
         </div>
 
         <div class="main-content">
@@ -192,7 +194,7 @@
             </div>
 
             <div class="section" id="framesSection" style="display: none;">
-                <div class="section-title">🖼️ 第三步：提取帧预览 (点击图片放大，鼠标悬停可删除)</div>
+                <div class="section-title">🖼️ 第三步：提取帧预览 (支持拖拽排序 / 点击放大 / ✕ 删除)</div>
                 <div class="frames-grid" id="framesGrid"></div>
             </div>
 
@@ -260,7 +262,7 @@
             </div>
 
             <div class="tips">
-                <p>💡 <b>Pro Tips：</b> 智能抠图已开启<b>四角自动检索</b>模式，能有效剔除四周的水印残留。建议使用 ZIP 导出功能直接导入游戏引擎。</p>
+                <p>💡 <b>Pro Tips：</b> 支持直接<b>拖拽帧卡片</b>进行手动排序。智能抠图已开启<b>四角自动检索</b>与<b>孤岛扫描</b>模式，能有效剔除缝隙背景与水印残留。</p>
             </div>
         </div>
     </div>
@@ -270,6 +272,7 @@
         let extractedFrames = [];
         let processedFrames = [];
         let previewInterval = null;
+        let dragSourceIndex = null;
 
         const videoInput = document.getElementById('videoInput');
         const videoElement = document.getElementById('videoElement');
@@ -304,7 +307,6 @@
 
             const total = Math.floor(videoElement.duration * fps);
             
-            // --- 核心优化：等比例缩放计算逻辑 ---
             const videoW = videoElement.videoWidth;
             const videoH = videoElement.videoHeight;
             const ratio = Math.min(w / videoW, h / videoH);
@@ -317,9 +319,7 @@
                 videoElement.currentTime = i * (1 / fps);
                 await new Promise(r => videoElement.onseeked = r);
                 
-                // 每次清空画布，确保等比例留白处是透明的
                 ctx.clearRect(0, 0, w, h);
-                // 使用计算好的偏移量和宽高，实现居中等比例绘制
                 ctx.drawImage(videoElement, offsetX, offsetY, drawW, drawH);
                 
                 extractedFrames.push(canvas.toDataURL('image/png'));
@@ -340,6 +340,9 @@
             currentFrames.forEach((src, idx) => {
                 const div = document.createElement('div');
                 div.className = 'frame-item';
+                div.setAttribute('draggable', true);
+                div.dataset.index = idx;
+                
                 if(isProcessed) div.style.background = 'repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 50% / 15px 15px';
                 
                 div.innerHTML = `
@@ -347,6 +350,11 @@
                     <div class="frame-number">#${idx+1}</div>
                     <div class="frame-delete" title="删除此帧">✕</div>
                 `;
+
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragend', handleDragEnd);
 
                 div.onclick = (e) => {
                     e.stopPropagation();
@@ -371,6 +379,39 @@
 
                 grid.appendChild(div);
             });
+        }
+
+        function handleDragStart(e) {
+            dragSourceIndex = parseInt(this.dataset.index);
+            this.style.opacity = '0.4';
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+            const targetIndex = parseInt(this.dataset.index);
+            
+            if (dragSourceIndex !== targetIndex) {
+                const isProcessed = processedFrames.length > 0;
+                const list = isProcessed ? processedFrames : extractedFrames;
+                
+                const movedItem = list.splice(dragSourceIndex, 1)[0];
+                list.splice(targetIndex, 0, movedItem);
+                
+                renderFrames();
+                startPreview();
+            }
+            return false;
+        }
+
+        function handleDragEnd() {
+            this.style.opacity = '1';
         }
 
         document.getElementById('removeBackgroundBtn').onclick = async () => {
@@ -421,6 +462,30 @@
                         data[idx+3] = ((diff-threshold)/(feather*10)) * 255;
                     }
                 }
+
+                /* --- 优化补丁：处理缝隙漏抠 (孤岛扫描逻辑) --- */
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        if (!visited[y * w + x]) {
+                            const diff = getDiff(x, y);
+                            const strictThreshold = threshold * 0.8; 
+                            if (diff < strictThreshold) {
+                                data[idx + 3] = 0;
+                                visited[y * w + x] = 1;
+                            }
+                        }
+                    }
+                }
+
+                for (let j = 0; j < data.length; j += 4) {
+                    if (data[j + 3] > 0 && data[j + 3] < 255) {
+                        data[j] = (data[j] * 0.7 + target[0] * 0.3);
+                        data[j+1] = (data[j+1] * 0.7 + target[1] * 0.3);
+                        data[j+2] = (data[j+2] * 0.7 + target[2] * 0.3);
+                    }
+                }
+                /* --- 补丁结束 --- */
 
                 const cornerSizeW = Math.floor(w * 0.2);
                 const cornerSizeH = Math.floor(h * 0.2);
