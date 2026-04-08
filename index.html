@@ -112,7 +112,6 @@
 
         button:disabled { background: #adb5bd; cursor: not-allowed; }
 
-        /* --- 预览网格与放大功能样式 --- */
         .frames-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -133,7 +132,6 @@
 
         .frame-item img { width: 100%; height: 100%; object-fit: contain; }
 
-        /* 放大状态样式 */
         .frame-item.zoomed {
             position: fixed;
             top: 50%;
@@ -301,7 +299,6 @@
         const videoElement = document.getElementById('videoElement');
         const overlay = document.getElementById('overlay');
 
-        // 上传处理
         document.getElementById('uploadArea').onclick = () => videoInput.click();
         videoInput.onchange = (e) => {
             if (e.target.files.length > 0) {
@@ -312,13 +309,11 @@
             }
         };
 
-        // 遮罩层关闭放大
         overlay.onclick = () => {
             document.querySelector('.frame-item.zoomed')?.classList.remove('zoomed');
             overlay.style.display = 'none';
         };
 
-        // 1. 提取帧
         document.getElementById('extractFramesBtn').onclick = async () => {
             const fps = parseInt(document.getElementById('fpsSelect').value);
             const w = parseInt(document.getElementById('frameWidth').value);
@@ -344,7 +339,6 @@
             document.getElementById('removeBackgroundSection').style.display = 'block';
         };
 
-        // 2. 渲染预览并绑定放大
         function renderFrames(frames, isProcessed = false) {
             const grid = document.getElementById('framesGrid');
             grid.innerHTML = '';
@@ -368,7 +362,7 @@
             });
         }
 
-        // 3. 抠图逻辑 (带水印剔除)
+        // --- 核心优化部分 ---
         document.getElementById('removeBackgroundBtn').onclick = async () => {
             const threshold = parseInt(document.getElementById('threshold').value);
             const feather = parseInt(document.getElementById('feather').value);
@@ -388,40 +382,51 @@
                 let data = imageData.data;
                 const w = canvas.width, h = canvas.height;
 
-                // 泛洪抠图
+                // 优化后的泛洪+细节提取
                 const visited = new Uint8Array(w * h);
                 const queue = new Int32Array(w * h * 2);
                 let head = 0, tail = 0;
 
-                const check = (x, y) => {
+                const getDiff = (x, y) => {
                     const idx = (y * w + x) * 4;
                     return Math.hypot(data[idx]-target[0], data[idx+1]-target[1], data[idx+2]-target[2]);
                 };
 
-                // 边缘种子点
-                for(let x=0; x<w; x++) { if(check(x,0) < threshold+20) { queue[tail++]=x; queue[tail++]=0; visited[x]=1; } }
+                // 从四边边缘注入种子
+                for(let x=0; x<w; x++) { if(!visited[x]) { queue[tail++]=x; queue[tail++]=0; visited[x]=1; } }
+                for(let y=0; y<h; y++) { if(!visited[y*w]) { queue[tail++]=0; queue[tail++]=y; visited[y*w]=1; } }
                 
                 while(head < tail) {
                     const cx = queue[head++], cy = queue[head++];
                     const idx = (cy * w + cx) * 4;
-                    const diff = check(cx, cy);
-                    if(diff < threshold) data[idx+3] = 0;
-                    else if(diff < threshold + feather*8) data[idx+3] = ((diff-threshold)/(feather*8)) * 255;
+                    const diff = getDiff(cx, cy);
 
-                    [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx,dy]) => {
-                        const nx = cx+dx, ny = cy+dy;
-                        if(nx>=0 && nx<w && ny>=0 && ny<h && !visited[ny*w+nx] && check(nx,ny) < threshold+feather*10) {
-                            visited[ny*w+nx]=1; queue[tail++]=nx; queue[tail++]=ny;
-                        }
-                    });
+                    if(diff < threshold + 15) { // 稍微扩大边缘搜索范围
+                        data[idx+3] = 0; 
+                        // 搜索相邻像素
+                        [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx,dy]) => {
+                            const nx = cx+dx, ny = cy+dy;
+                            if(nx>=0 && nx<w && ny>=0 && ny<h && !visited[ny*w+nx]) {
+                                visited[ny*w+nx]=1; queue[tail++]=nx; queue[tail++]=ny;
+                            }
+                        });
+                    } else if (diff < threshold + feather * 10) {
+                        data[idx+3] = ((diff-threshold)/(feather*10)) * 255;
+                    }
                 }
 
-                // 右下角水印深度清理 (保护角色前提下处理 15% 区域)
-                const wmX = Math.floor(w * 0.8), wmY = Math.floor(h * 0.85);
-                for(let y=wmY; y<h; y++) {
-                    for(let x=wmX; x<w; x++) {
-                        const idx = (y*w+x)*4;
-                        if(check(x,y) < threshold + 45) data[idx+3] *= 0.2; 
+                // 针对“豆包”等右下角水印的深度清除
+                // 扫描底部 20% 区域，特别是右侧部分
+                const scanStartY = Math.floor(h * 0.8);
+                const scanStartX = Math.floor(w * 0.7);
+                for(let y = scanStartY; y < h; y++) {
+                    for(let x = scanStartX; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        const diff = getDiff(x, y);
+                        // 水印通常是浅灰色或带有半透明背景，这里加强色度检测
+                        if (diff < threshold + 60) { 
+                            data[idx+3] = 0; 
+                        }
                     }
                 }
 
@@ -433,7 +438,6 @@
             document.getElementById('generateSection').style.display = 'block';
         };
 
-        // 4. 生成精灵图
         document.getElementById('generateSpriteSheetBtn').onclick = () => {
             const cols = parseInt(document.getElementById('columns').value);
             const frames = processedFrames.length > 0 ? processedFrames : extractedFrames;
@@ -463,7 +467,6 @@
             img.src = frames[0];
         };
 
-        // UI 交互
         document.getElementById('threshold').oninput = (e) => document.getElementById('thresholdValue').innerText = e.target.value;
         document.getElementById('feather').oninput = (e) => document.getElementById('featherValue').innerText = e.target.value;
     </script>
